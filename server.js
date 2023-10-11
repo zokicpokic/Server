@@ -7,7 +7,7 @@ const sql = require('mssql');
 // SSL configuration
 let key = fs.readFileSync('../certs/2091920919.key','utf-8')
 let cert = fs.readFileSync('../certs/2091920919.crt','utf-8')
-//const port = 8443
+//const port = 8443 do not use
 
 const parameters = {
   key: key,
