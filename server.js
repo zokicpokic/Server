@@ -70,7 +70,7 @@ app.get('/api/jobs/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+const MAX = 8000;
 // POST a new job
 app.post('/api/jobs', async (req, res) => {
   const newJob = req.body; // Assuming you send job data in the request body
@@ -78,12 +78,68 @@ app.post('/api/jobs', async (req, res) => {
     const pool = await sql.connect(config);
     const result = await pool
       .request()
-      .input('job_type_id', sql.UniqueIdentifier, newJob.job_type_id)
       .input('client_id', sql.UniqueIdentifier, newJob.client_id)
-      // Add more inputs for other columns as needed
+      .input('operater_id', sql.UniqueIdentifier, newJob.operater_id)
+      .input('job_date', sql.DateTime, newJob.job_date)
+      .input('job_type_id', sql.UniqueIdentifier, newJob.job_type_id)
+      .input('paper_id', sql.UniqueIdentifier, newJob.paper_id)
+      .input('printer_id', sql.UniqueIdentifier, newJob.printer_id)
+      .input('envelope_id', sql.UniqueIdentifier, newJob.envelope_id)
+      .input('envelope_printer_id', sql.UniqueIdentifier, newJob.envelope_printer_id)
+      .input('envelope_ps_id', sql.UniqueIdentifier, newJob.envelope_ps_id)
+      .input('ps_machine_id', sql.UniqueIdentifier, newJob.ps_machine_id)
+      .input('qty_lists', sql.Int, newJob.qty_lists)
+      .input('qty_pages', sql.Int, newJob.qty_pages)
+      .input('qty_envelope', sql.Int, newJob.qty_envelope)
+      .input('qty_boxes', sql.Int, newJob.qty_boxes)
+      .input('start_time', sql.NVarChar(8), newJob.start_time)
+      .input('end_time', sql.NVarChar(8), newJob.end_time)
+      .input('status_id', sql.UniqueIdentifier, newJob.status_id)
+      .input('other', sql.NVarChar(MAX), newJob.other)
+      // Add inputs for other columns as needed
       .query(`
-        INSERT INTO jobs (job_type_id, client_id, job_date, ...)
-        VALUES (@job_type_id, @client_id, GETDATE(), ...);
+        INSERT INTO jobs (
+          client_id,
+          operater_id,
+          job_date,
+          job_type_id,
+          paper_id,
+          printer_id,
+          envelope_id,
+          envelope_printer_id,
+          envelope_ps_id,
+          ps_machine_id,
+          qty_lists,
+          qty_pages,
+          qty_envelope,
+          qty_boxes,
+          start_time,
+          end_time,
+          status_id,
+          other
+          -- Add other column names here
+        )
+        VALUES (
+          @client_id,
+          @operater_id,
+          @job_date,
+          @job_type_id,
+          @paper_id,
+          @printer_id,
+          @envelope_id,
+          @envelope_printer_id,
+          @envelope_ps_id,
+          @ps_machine_id,
+          @qty_lists,
+          @qty_pages,
+          @qty_envelope,
+          @qty_boxes,
+          @start_time,
+          @end_time,
+          @status_id,
+          @other
+          -- Add values for other columns here
+        );
       `);
     res.status(201).json({ message: 'Job created successfully' });
     pool.close();
