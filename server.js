@@ -36,243 +36,257 @@ const config = {
 
 app.use(bodyParser.json());
 
-// GET - Retrieve all jobs
-app.get('/jobs', async (req, res) => {
-  try {
-    const pool = await sql.connect(config);
-    let result; // Define the result variable here
-
-    result = await pool
-      .request()
-      .query(`
-        SELECT
-          jobs.*,
-          codes.code_name AS Prn1_name,
-          codes2.code_name AS Prn2_name,
-          codes3.code_name AS Prn3_name,
-          codes4.code_name AS Prn4_name,
-          codes5.code_name AS Prn5_name,
-          codes6.code_name AS Kov1_name,
-          codes7.code_name AS Kov2_name,
-          codes8.code_name AS Kov3_name,
-          codes9.code_name AS Kov4_name,
-          materials.material_name,
-          status.status_name
-        FROM jobs
-        LEFT JOIN codes ON jobs.Prn1 = codes.id
-        LEFT JOIN codes AS codes2 ON jobs.Prn2 = codes2.id
-        LEFT JOIN codes AS codes3 ON jobs.Prn3 = codes3.id
-        LEFT JOIN codes AS codes4 ON jobs.Prn4 = codes4.id
-        LEFT JOIN codes AS codes5 ON jobs.Prn5 = codes5.id
-        LEFT JOIN codes AS codes6 ON jobs.Kov1 = codes6.id
-        LEFT JOIN codes AS codes7 ON jobs.Kov2 = codes7.id
-        LEFT JOIN codes AS codes8 ON jobs.Kov3 = codes8.id
-        LEFT JOIN codes AS codes9 ON jobs.Kov4 = codes9.id
-        LEFT JOIN materials ON jobs.materialid = materials.id
-        LEFT JOIN status ON jobs.statusid = status.id
-      `);
-
-    res.json(result.recordset);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// Add these routes to your Node.js server
-
-// GET - Retrieve all PRN codes
-app.get('/codes', async (req, res) => {
-  try {
-    const pool = await sql.connect(config);
-    const result = await pool.request().query('SELECT id, code_name FROM codes');
-    res.json(result.recordset);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET - Retrieve all materials
-app.get('/materials', async (req, res) => {
-  try {
-    const pool = await sql.connect(config);
-    const result = await pool.request().query('SELECT id, material_name FROM materials');
-    res.json(result.recordset);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET - Retrieve all status values
-app.get('/statuses', async (req, res) => {
-  try {
-    const pool = await sql.connect(config);
-    const result = await pool.request().query('SELECT id, status_name FROM status');
-    res.json(result.recordset);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
-
-// POST - Create a new job
-app.post('/jobs', async (req, res) => {
-  const {
-    job_name,
-    job_date,
-    client_name,
-    operater_name,
-    prn1,
-    prn2,
-    prn3,
-    prn4,
-    prn5,
-    kov1,
-    kov2,
-    kov3,
-    kov4,
-    material_id,
-    status_id,
-  } = req.body;
+//APIS
+// GET all jobs
+app.get('/api/jobs', async (req, res) => {
   try {
     const pool = await sql.connect(config);
     const result = await pool
       .request()
-      .input('job_name', sql.NVarChar, job_name)
-      .input('job_date', sql.DateTime, job_date)
-      .input('client_name', sql.NVarChar, client_name)
-      .input('operater_name', sql.NVarChar, operater_name)
-      .input('prn1', sql.UniqueIdentifier, prn1)
-      .input('prn2', sql.UniqueIdentifier, prn2)
-      .input('prn3', sql.UniqueIdentifier, prn3)
-      .input('prn4', sql.UniqueIdentifier, prn4)
-      .input('prn5', sql.UniqueIdentifier, prn5)
-      .input('kov1', sql.UniqueIdentifier, kov1)
-      .input('kov2', sql.UniqueIdentifier, kov2)
-      .input('kov3', sql.UniqueIdentifier, kov3)
-      .input('kov4', sql.UniqueIdentifier, kov4)
-      .input('material_id', sql.UniqueIdentifier, material_id)
-      .input('status_id', sql.UniqueIdentifier, status_id)
+      .query('SELECT * FROM jobs');
+    res.json(result.recordset);
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET a single job by ID
+app.get('/api/jobs/:id', async (req, res) => {
+  const jobId = req.params.id;
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .input('id', sql.UniqueIdentifier, jobId)
+      .query('SELECT * FROM jobs WHERE id = @id');
+    if (result.recordset.length === 0) {
+      res.status(404).send('Job not found');
+    } else {
+      res.json(result.recordset[0]);
+    }
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+const MAX = 8000;
+// POST a new job
+app.post('/api/jobs', async (req, res) => {
+  const newJob = req.body; // Assuming you send job data in the request body
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .input('client_id', sql.NVarChar(255), newJob.client_id)
+      .input('operater_id', sql.UniqueIdentifier, newJob.operater_id)
+      .input('job_date', sql.DateTime, newJob.job_date)
+      .input('job_type_id', sql.UniqueIdentifier, newJob.job_type_id)
+      .input('paper_id', sql.NVarChar(255), newJob.paper_id)
+      .input('printer_id', sql.NVarChar(255), newJob.printer_id)
+      .input('envelope_id', sql.NVarChar(255), newJob.envelope_id)
+      .input('envelope_printer_id', sql.NVarChar(255), newJob.envelope_printer_id)
+      .input('envelope_ps_id', sql.NVarChar(255), newJob.envelope_ps_id)
+      .input('ps_machine_id', sql.NVarChar(255), newJob.ps_machine_id)
+      .input('qty_lists', sql.Int, newJob.qty_lists)
+      .input('qty_pages', sql.Int, newJob.qty_pages)
+      .input('qty_envelope', sql.Int, newJob.qty_envelope)
+      .input('qty_boxes', sql.Int, newJob.qty_boxes)
+      .input('start_time', sql.NVarChar(8), newJob.start_time)
+      .input('end_time', sql.NVarChar(8), newJob.end_time)
+      .input('status_id', sql.UniqueIdentifier, newJob.status_id)
+      .input('other', sql.NVarChar(MAX), newJob.other)
+      // Add inputs for other columns as needed
       .query(`
         INSERT INTO jobs (
-          job_name,
+          client_id,
+          operater_id,
           job_date,
-          client_name,
-          operater_name,
-          Prn1,
-          Prn2,
-          Prn3,
-          Prn4,
-          Prn5,
-          Kov1,
-          Kov2,
-          Kov3,
-          Kov4,
-          materialid,
-          statusid
-        ) VALUES (
-          @job_name,
+          job_type_id,
+          paper_id,
+          printer_id,
+          envelope_id,
+          envelope_printer_id,
+          envelope_ps_id,
+          ps_machine_id,
+          qty_lists,
+          qty_pages,
+          qty_envelope,
+          qty_boxes,
+          start_time,
+          end_time,
+          status_id,
+          other
+          -- Add other column names here
+        )
+        VALUES (
+          @client_id,
+          @operater_id,
           @job_date,
-          @client_name,
-          @operater_name,
-          @prn1,
-          @prn2,
-          @prn3,
-          @prn4,
-          @prn5,
-          @kov1,
-          @kov2,
-          @kov3,
-          @kov4,
-          @material_id,
-          @status_id
+          @job_type_id,
+          @paper_id,
+          @printer_id,
+          @envelope_id,
+          @envelope_printer_id,
+          @envelope_ps_id,
+          @ps_machine_id,
+          @qty_lists,
+          @qty_pages,
+          @qty_envelope,
+          @qty_boxes,
+          @start_time,
+          @end_time,
+          @status_id,
+          @other
+          -- Add values for other columns here
         );
-
-        SELECT SCOPE_IDENTITY() AS new_jobid;
       `);
-
-    res.json({ jobid: result.recordset[0].new_jobid });
+    res.status(201).json({ message: 'Job created successfully' });
+    pool.close();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// PUT - Update a job
-app.put('/jobs/:jobid', async (req, res) => {
-  const jobid = req.params.jobid;
-  const {
-    job_name,
-    job_date,
-    client_name,
-    operater_name,
-    prn1,
-    prn2,
-    prn3,
-    prn4,
-    prn5,
-    kov1,
-    kov2,
-    kov3,
-    kov4,
-    material_id,
-    status_id
-  } = req.body;
+// PUT (update) an existing job by ID
+app.put('/api/jobs/:id', async (req, res) => {
+  const jobId = req.params.id;
+  const updatedJob = req.body;
 
   try {
     const pool = await sql.connect(config);
-    await pool.request()
-      .input('jobid', sql.UniqueIdentifier, jobid)
-      .input('job_name', sql.NVarChar, job_name)
-      .input('job_date', sql.DateTime, job_date)
-      .input('client_name', sql.NVarChar, client_name)
-      .input('operater_name', sql.NVarChar, operater_name)
-      .input('prn1', sql.UniqueIdentifier, prn1)
-      .input('prn2', sql.UniqueIdentifier, prn2)
-      .input('prn3', sql.UniqueIdentifier, prn3)
-      .input('prn4', sql.UniqueIdentifier, prn4)
-      .input('prn5', sql.UniqueIdentifier, prn5)
-      .input('kov1', sql.UniqueIdentifier, kov1)
-      .input('kov2', sql.UniqueIdentifier, kov2)
-      .input('kov3', sql.UniqueIdentifier, kov3)
-      .input('kov4', sql.UniqueIdentifier, kov4)
-      .input('material_id', sql.UniqueIdentifier, material_id)
-      .input('status_id', sql.UniqueIdentifier, status_id)
+    const result = await pool
+      .request()
+      .input('id', sql.UniqueIdentifier, updatedJob.id) // Added this line to use the jobId in the SQL query
+      .input('client_id', sql.NVarChar(255), updatedJob.client_id)
+      .input('operater_id', sql.UniqueIdentifier, updatedJob.operater_id)
+      .input('job_date', sql.DateTime, updatedJob.job_date)
+      .input('job_type_id', sql.NVarChar(255), updatedJob.job_type_id)
+      .input('paper_id', sql.NVarChar(255), updatedJob.paper_id)
+      .input('printer_id', sql.NVarChar(255), updatedJob.printer_id)
+      .input('envelope_id', sql.NVarChar(255), updatedJob.envelope_id)
+      .input('envelope_printer_id', sql.NVarChar(255), updatedJob.envelope_printer_id)
+      .input('envelope_ps_id', sql.NVarChar(255), updatedJob.envelope_ps_id)
+      .input('ps_machine_id', sql.NVarChar(255), updatedJob.ps_machine_id)
+      .input('qty_lists', sql.Int, updatedJob.qty_lists)
+      .input('qty_pages', sql.Int, updatedJob.qty_pages)
+      .input('qty_envelope', sql.Int, updatedJob.qty_envelope)
+      .input('qty_boxes', sql.Int, updatedJob.qty_boxes)
+      .input('start_time', sql.NVarChar(50), updatedJob.start_time)
+      .input('end_time', sql.NVarChar(50), updatedJob.end_time)
+      .input('status_id', sql.UniqueIdentifier, updatedJob.status_id)
+      .input('other', sql.NVarChar(MAX), updatedJob.other)
       .query(`
-        UPDATE jobs SET 
-          job_name = @job_name, 
-          job_date = @job_date, 
-          client_name = @client_name, 
-          operater_name = @operater_name, 
-          Prn1 = @prn1, 
-          Prn2 = @prn2,
-          Prn3 = @prn3,
-          Prn4 = @prn4,
-          Prn5 = @prn5,
-          Kov1 = @kov1,
-          Kov2 = @kov2,
-          Kov3 = @kov3,
-          Kov4 = @kov4,
-          materialid = @material_id,
-          statusid = @status_id 
-        WHERE jobid = @jobid
+        UPDATE jobs
+        SET 
+          client_id = @client_id,
+          operater_id = @operater_id,
+          job_date = @job_date,
+          job_type_id = @job_type_id,
+          paper_id = @paper_id,
+          printer_id = @printer_id,
+          envelope_id = @envelope_id,
+          envelope_printer_id = @envelope_printer_id,
+          envelope_ps_id = @envelope_ps_id,
+          ps_machine_id = @ps_machine_id,
+          qty_lists = @qty_lists,
+          qty_pages = @qty_pages,
+          qty_envelope = @qty_envelope,
+          qty_boxes = @qty_boxes,
+          start_time = @start_time,
+          end_time = @end_time,
+          status_id = @status_id,
+          other = @other
+        WHERE id = @id;
       `);
-
-    res.sendStatus(200);
+    res.json({ message: 'Job updated successfully' });
+    pool.close();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// DELETE - Delete a job
-app.delete('/jobs/:jobid', async (req, res) => {
-  const jobid = req.params.jobid;
+// DELETE a job by ID
+app.delete('/api/jobs/:id', async (req, res) => {
+  const jobId = req.params.id;
   try {
     const pool = await sql.connect(config);
-    await pool.request()
-      .input('jobid', sql.UniqueIdentifier, jobid)
-      .query('DELETE FROM jobs WHERE jobid = @jobid');
-    res.sendStatus(200);
+    const result = await pool
+      .request()
+      .input('id', sql.UniqueIdentifier, jobId)
+      .query('DELETE FROM jobs WHERE id = @id');
+    res.json({ message: 'Job deleted successfully' });
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all job types
+app.get('/api/job_types', async (req, res) => {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .query('SELECT * FROM job_type');
+    res.json(result.recordset);
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all materials and equipment
+app.get('/api/materials_equipment', async (req, res) => {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .query('SELECT * FROM materials_equipment');
+    res.json(result.recordset);
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all users
+app.get('/api/users', async (req, res) => {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .query('SELECT * FROM users');
+    res.json(result.recordset);
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all statuses
+app.get('/api/statuses', async (req, res) => {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .query('SELECT * FROM status');
+    res.json(result.recordset);
+    pool.close();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all clients
+app.get('/api/clients', async (req, res) => {
+  try {
+    const pool = await sql.connect(config);
+    const result = await pool
+      .request()
+      .query('SELECT * FROM clients');
+    res.json(result.recordset);
+    pool.close();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
